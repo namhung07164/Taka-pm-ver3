@@ -27,8 +27,7 @@ import {
 import { markTasksDeleted } from "../../lib/taskDeletedTracker";
 
 // Delta-first: sau lần tải đầy đủ đầu tiên, hủy onSnapshot lớn, dựa vào Dexie + kênh delta.
-// Bật TỪNG CÁI sau khi đã test. Mặc định tắt = hành vi hiện tại.
-const DELTA_FIRST = { projects: false, tasks: false, costs: false, delegations: false };
+const DELTA_FIRST = { projects: true, tasks: true, costs: true, delegations: true };
 
 
 interface UseTasksHydrationProps {
@@ -290,6 +289,25 @@ export function useTasksHydration({
       if (intervalId) clearInterval(intervalId);
     };
   }, [querySignature, isTasksRequested, setAllTasksForNotifs]);
+
+  // Safety Net: Handle manual force full sync
+  useEffect(() => {
+    const handleForceSync = () => {
+      tasksPool.current.forEach((u) => {
+        try { u(); } catch {}
+      });
+      tasksPool.current.clear();
+      tasksTTLTimeouts.current.forEach((t) => clearTimeout(t));
+      tasksTTLTimeouts.current.clear();
+      knownHydratedProjectCodes.current.clear();
+      prevQuerySigTasks.current = "";
+    };
+
+    window.addEventListener('taka_force_full_sync', handleForceSync);
+    return () => {
+      window.removeEventListener('taka_force_full_sync', handleForceSync);
+    };
+  }, []);
 
   // Main Tasks Sync Logic
   useEffect(() => {

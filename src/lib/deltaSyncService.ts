@@ -106,6 +106,24 @@ export function filterUnappliedDeltas(items: TakaDelta[]): TakaDelta[] {
   return fresh;
 }
 
+/**
+ * Lớp 5 (Safety Net - Nút Refresh Thủ Công):
+ * Cưỡng chế xóa marker, làm sạch cursor đã áp dụng, kéo bù delta mới nhất
+ * và gửi tín hiệu đồng bộ lại toàn bộ dữ liệu từ server cho tất cả các collection.
+ */
+export async function forceFullServerSync(): Promise<void> {
+  const { clearLoadedMarkers } = await import('./loadedMarkers');
+  await clearLoadedMarkers();
+  appliedDeltaIds.clear();
+
+  const { pullAndApplyDeltas } = await import('./deltaPullService');
+  await pullAndApplyDeltas(undefined, true);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('taka_force_full_sync'));
+  }
+}
+
 // Re-exports for backward compatibility
 export { recordDelta, recordBatchDeltas } from './deltaWriteService';
 export { applyIncomingDeltas } from './deltaApplyService';

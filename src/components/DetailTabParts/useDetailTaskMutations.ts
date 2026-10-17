@@ -155,22 +155,8 @@ export function useDetailTaskMutations({
         );
         if (!realTask && t.projectCode) {
           try {
-            const { getLocalTasksForProjects, bulkPersistTasks } = await import('../../lib/localDb');
-            let loaded: Task[] = (await getLocalTasksForProjects([t.projectCode])).filter(dt => !dt.isDeleted);
-            if (!loaded.some(sameProjectIdentity)) {
-              const { collection, query, where, getDocs } = await import('firebase/firestore');
-              const q = query(
-                collection(db, 'artifacts', APP_ID, 'public', 'data', 'taka_tasks'),
-                where('projectCode', '==', t.projectCode)
-              );
-              const snap = await getDocs(q);
-              loaded = [];
-              snap.forEach(d => {
-                const dt = { id: d.id, ...d.data() } as Task;
-                if (!dt.isDeleted) loaded.push(dt);
-              });
-              if (loaded.length > 0) bulkPersistTasks(loaded).catch(() => {});
-            }
+            const { getLocalTasksForProjects } = await import('../../lib/localDb');
+            const loaded: Task[] = (await getLocalTasksForProjects([t.projectCode])).filter(dt => !dt.isDeleted);
             // Chỉ nhận task đúng store + year của dự án đang sửa, và không thêm trùng id vào store
             const loadedSame = loaded.filter(sameProjectIdentity);
             if (loadedSame.length > 0) {
@@ -186,7 +172,7 @@ export function useDetailTaskMutations({
               );
             }
           } catch (err) {
-            console.warn("Failed to fetch real task for ts_ in Firestore:", err);
+            console.warn("Failed to fetch real task for ts_ in localDb:", err);
           }
         }
         if (realTask) {

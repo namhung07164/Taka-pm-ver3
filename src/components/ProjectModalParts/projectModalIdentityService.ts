@@ -46,25 +46,11 @@ export async function handleProjectIdentityChange({
     return matchesCode && matchesYear && matchesStore;
   });
 
-  // If memory does not have tasks for this project (e.g. mobile lazy load), check Dexie first, then Firestore only if needed
+  // If memory does not have tasks for this project (e.g. mobile lazy load), check Dexie local DB (0ms, 0 Read)
   if (relatedTasks.length === 0 && project.code && (project.taskCount || (project.taskSummaries && project.taskSummaries.length > 0))) {
     try {
-      const { getLocalTasksForProjects, bulkPersistTasks } = await import('../../lib/localDb');
-      let loaded: Task[] = (await getLocalTasksForProjects([project.code])).filter(dt => !dt.isDeleted);
-      if (loaded.length === 0) {
-        const { collection, query, where, getDocs } = await import('firebase/firestore');
-        const q = query(
-          collection(db, 'artifacts', APP_ID, 'public', 'data', 'taka_tasks'),
-          where('projectCode', '==', project.code)
-        );
-        const snap = await getDocs(q);
-        loaded = [];
-        snap.forEach(d => {
-          const dt = { id: d.id, ...d.data() } as Task;
-          if (!dt.isDeleted) loaded.push(dt);
-        });
-        if (loaded.length > 0) bulkPersistTasks(loaded).catch(() => {});
-      }
+      const { getLocalTasksForProjects } = await import('../../lib/localDb');
+      const loaded: Task[] = (await getLocalTasksForProjects([project.code])).filter(dt => !dt.isDeleted);
       if (loaded.length > 0) {
         relatedTasks = loaded.filter(t => {
           const matchesYear = !t.projectYear || !oldPYear || String(t.projectYear) === oldPYear;
@@ -76,7 +62,7 @@ export async function handleProjectIdentityChange({
         useAppStore.getState().setTasks(rawTasks);
       }
     } catch (err) {
-      console.warn("Failed to fetch tasks for project identity change from Firestore:", err);
+      console.warn("Failed to fetch tasks for project identity change from localDb:", err);
     }
   }
 

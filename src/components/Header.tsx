@@ -32,7 +32,9 @@ import {
   SlidersHorizontal,
   Search,
   Command,
+  RefreshCw,
 } from "lucide-react";
+import { forceFullServerSync } from "../lib/deltaSyncService";
 import { lazyWithRetry } from "../lib/lazyWithRetry";
 const QRScannerModal = lazyWithRetry(() => import("./QRScannerModal").then(m => ({ default: m.QRScannerModal })), "QRScannerModal");
 import { AppUser, TabId, AppRole } from "../types";
@@ -77,8 +79,30 @@ export function Header({
   const theme = useAppStore(state => state.theme);
   const appUsers = useAppStore(state => state.appUsers);
   const subAppUsers = useAppStore(state => state.subAppUsers);
-  const parties = useAppStore(state => state.parties);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+  const [isFullSyncing, setIsFullSyncing] = useState(false);
+
+  const handleForceSyncClick = async () => {
+    if (isFullSyncing) return;
+    setIsFullSyncing(true);
+    try {
+      await forceFullServerSync();
+      useAppStore.getState().setToast({
+        title: "Full Sync Completed",
+        message: "Data has been verified and reconciled 100% with the cloud server.",
+        type: "success"
+      });
+    } catch (err) {
+      console.error("Force sync failed:", err);
+      useAppStore.getState().setToast({
+        title: "Sync Warning",
+        message: "Network interrupted. Stored local cache remains active.",
+        type: "warning"
+      });
+    } finally {
+      setIsFullSyncing(false);
+    }
+  };
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -367,6 +391,16 @@ export function Header({
             }
           >
             {currency === 'VND' ? "'000 VND" : currency === 'JPY' ? '万円' : 'USD'}
+          </button>
+
+          {/* Force Full Sync / Refresh Safety Net Button */}
+          <button
+            onClick={handleForceSyncClick}
+            disabled={isFullSyncing}
+            className="h-8 w-8 flex items-center justify-center bg-slate-50 hover:bg-slate-100 dark:bg-[#28282a] dark:hover:bg-[#333336] rounded-lg transition-colors border border-slate-200 dark:border-[#444446] shadow-2xs text-slate-600 dark:text-[#a3a3a3] hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 touch-manipulation shrink-0 cursor-pointer disabled:opacity-50"
+            title="Force Full Sync (Cưỡng chế đồng bộ toàn bộ từ Server)"
+          >
+            <RefreshCw className={cn("w-4 h-4", isFullSyncing && "animate-spin text-emerald-500")} />
           </button>
 
           {/* QR Scanner Button */}

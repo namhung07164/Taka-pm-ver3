@@ -114,7 +114,7 @@ export function PdfNativeCanvasViewer({
         if (!isMounted) {
           try {
             doc.cleanup?.();
-            doc.destroy?.();
+            (doc as any).destroy?.();
           } catch {}
           return;
         }
@@ -153,7 +153,7 @@ export function PdfNativeCanvasViewer({
       if (activePdfRef.current) {
         try {
           activePdfRef.current.cleanup?.();
-          activePdfRef.current.destroy?.();
+          (activePdfRef.current as any).destroy?.();
         } catch {}
         activePdfRef.current = null;
       }

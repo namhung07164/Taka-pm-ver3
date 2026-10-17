@@ -2,6 +2,7 @@ import { collection, query, where, limit, getDocsFromCache, getDocsFromServer } 
 import { db, APP_ID } from './firebase';
 import { getLocalTasks, bulkPersistTasks } from './localDb';
 import { usePerformanceStore } from '../store/usePerformanceStore';
+import { useAppStore } from '../store/useAppStore';
 import { Task } from '../types';
 
 /**
@@ -40,7 +41,8 @@ export function filterTasksForNotificationWindow(
 /**
  * Loads tasks for notification bell / deadline monitoring.
  *
- * Tối ưu hóa Firestore Read (Phương pháp 1):
+ * Tối ưu hóa Firestore Read:
+ * - Ưu tiên 0: In-Memory Zustand Store (0ms, 0 Read).
  * - Ưu tiên 1 (Cache-First): Đọc 100% từ Dexie Local-First DB (0ms, 0 Firestore Read).
  * - Ưu tiên 2 (Cold-Boot Fallback): Chỉ khi Dexie hoàn toàn rỗng (lần đầu vào app trên máy mới/Incognito),
  *   mới kích hoạt truy vấn 50 tasks từ Firestore, sau đó lưu ngay vào Dexie để lần sau tiếp tục đạt 0 Read.
@@ -54,6 +56,15 @@ export async function loadNotificationTasks(options?: {
   const maxCount = options?.maxCount || 50;
 
   try {
+    // 0. Kiểm tra bộ nhớ Zustand trước (0ms, 0 I/O)
+    const storeTasks = useAppStore.getState().tasks;
+    if (storeTasks && storeTasks.length > 0) {
+      const filtered = filterTasksForNotificationWindow(storeTasks, past7, future14, maxCount);
+      if (filtered.length > 0) {
+        return filtered;
+      }
+    }
+
     // 1. Kiểm tra dữ liệu trong Dexie Local DB trước (0 Read Firestore)
     const localTasks = await getLocalTasks();
 

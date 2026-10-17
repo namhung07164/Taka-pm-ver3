@@ -299,6 +299,7 @@ export interface DelegationGroup {
   id: string;
   parentTaskId?: string; // ID of the taka_task if linked
   name: string; // Custom name if not linked, or task name if linked
+  projectId?: string;
   projectCode?: string; // If linked
   projectStore?: string;
   projectYear?: number | string;

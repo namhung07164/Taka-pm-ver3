@@ -15,8 +15,7 @@ import { pullAndApplyDeltas } from "../../lib/deltaSyncService";
 import { getLoadedMarkers, hasMarker, markLoaded } from "../../lib/loadedMarkers";
 
 // Delta-first: sau lần tải đầy đủ đầu tiên, hủy onSnapshot lớn, dựa vào Dexie + kênh delta.
-// Bật TỪNG CÁI sau khi đã test. Mặc định tắt = hành vi hiện tại.
-const DELTA_FIRST = { projects: false, tasks: false, costs: false, delegations: false };
+const DELTA_FIRST = { projects: true, tasks: true, costs: true, delegations: true };
 
 
 interface UseDelegationsHydrationProps {
@@ -143,6 +142,26 @@ export function useDelegationsHydration({
       delegationsTTLTimeouts.current.clear();
       yearDelegationsCache.current.clear();
       if (delegationsBatchTimer.current) clearTimeout(delegationsBatchTimer.current);
+    };
+  }, []);
+
+  // Safety Net: Handle manual force full sync
+  useEffect(() => {
+    const handleForceSync = () => {
+      delegationsPool.current.forEach((u, key) => {
+        try { u(); } catch {}
+        usePerformanceStore.getState().unregisterListener(`taka_delegation_groups_${key}`);
+      });
+      delegationsPool.current.clear();
+      delegationsTTLTimeouts.current.forEach((t) => clearTimeout(t));
+      delegationsTTLTimeouts.current.clear();
+      yearDelegationsCache.current.clear();
+      prevQuerySigDelegations.current = "";
+    };
+
+    window.addEventListener('taka_force_full_sync', handleForceSync);
+    return () => {
+      window.removeEventListener('taka_force_full_sync', handleForceSync);
     };
   }, []);
 

@@ -113,25 +113,11 @@ export async function executeTaskSave({
     );
     if (!realTask && currentProject?.code) {
       try {
-        const { getLocalTasksForProjects, bulkPersistTasks } = await import('../../lib/localDb');
+        const { getLocalTasksForProjects } = await import('../../lib/localDb');
         const sameIdentity = (x: Task) =>
           String(x.projectStore || '').trim().toLowerCase() === String(currentProject.store || '').trim().toLowerCase() &&
           String(x.projectYear ?? '').trim() === String(currentProject.year ?? '').trim();
-        let loaded: Task[] = (await getLocalTasksForProjects([currentProject.code])).filter(dt => !dt.isDeleted);
-        if (!loaded.some(sameIdentity)) {
-          const { collection, query, where, getDocs } = await import('firebase/firestore');
-          const q = query(
-            collection(db, 'artifacts', APP_ID, 'public', 'data', 'taka_tasks'),
-            where('projectCode', '==', currentProject.code)
-          );
-          const snap = await getDocs(q);
-          loaded = [];
-          snap.forEach(d => {
-            const dt = { id: d.id, ...d.data() } as Task;
-            if (!dt.isDeleted) loaded.push(dt);
-          });
-          if (loaded.length > 0) bulkPersistTasks(loaded).catch(() => {});
-        }
+        const loaded: Task[] = (await getLocalTasksForProjects([currentProject.code])).filter(dt => !dt.isDeleted);
         // Chỉ nhận task đúng store + year của dự án đang sửa, và không thêm trùng id vào store
         const loadedSame = loaded.filter(sameIdentity);
         if (loadedSame.length > 0) {
@@ -147,7 +133,7 @@ export async function executeTaskSave({
           );
         }
       } catch (err) {
-        console.warn("Failed to find real task for ts_ in Firestore:", err);
+        console.warn("Failed to find real task for ts_ in localDb:", err);
       }
     }
     if (realTask) {

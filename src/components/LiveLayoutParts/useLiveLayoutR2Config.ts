@@ -4,7 +4,7 @@ import { useDataStore } from '../PictureMapping/DataContext';
 import { extractR2Key, getS3Sdk, downloadR2JsonFile } from '../PictureMapping/lib/r2Upload';
 import { preloadFloorImages } from '../../lib/imageDBCache';
 import { db, APP_ID } from '../../lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export interface LiveLayoutR2ConfigState {
   config: any;
@@ -295,23 +295,10 @@ export function useLiveLayoutR2Config(): LiveLayoutR2ConfigState {
       window.addEventListener('taka_cloud_sync_updated', handleSyncUpdate);
     }
 
-    let lastVersion = -1;
-    // Realtime snapshot listener on taka_config/versions (version-guarded to eliminate duplicate read on mount)
-    const unsubSnapshot = onSnapshot(doc(db, "artifacts", APP_ID, "public", "data", "taka_config", "versions"), (snap) => {
-      if (snap.exists()) {
-        const remoteVersion = (snap.data() as any)?.pictureMappingVersion ?? 0;
-        if (lastVersion !== -1 && remoteVersion !== lastVersion) {
-          loadConfig();
-        }
-        lastVersion = remoteVersion;
-      }
-    });
-
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('taka_cloud_sync_updated', handleSyncUpdate);
       }
-      unsubSnapshot();
     };
   }, [loadConfig]);
 

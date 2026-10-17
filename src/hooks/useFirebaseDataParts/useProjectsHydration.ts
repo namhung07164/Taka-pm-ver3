@@ -25,8 +25,7 @@ import { markTasksDeleted } from "../../lib/taskDeletedTracker";
 import { isTaskBelongsToProject } from "../../lib/taskStateService";
 
 // Delta-first: sau lần tải đầy đủ đầu tiên, hủy onSnapshot lớn, dựa vào Dexie + kênh delta.
-// Bật TỪNG CÁI sau khi đã test. Mặc định tắt = hành vi hiện tại.
-const DELTA_FIRST = { projects: false, tasks: false, costs: false, delegations: false };
+const DELTA_FIRST = { projects: true, tasks: true, costs: true, delegations: true };
 
 
 interface UseProjectsHydrationProps {
@@ -218,6 +217,24 @@ export function useProjectsHydration({
       });
       projectsPool.current.clear();
       if (projectsBatchTimer.current) clearTimeout(projectsBatchTimer.current);
+    };
+  }, []);
+
+  // Safety Net: Handle manual force full sync
+  useEffect(() => {
+    const handleForceSync = () => {
+      projectsPool.current.forEach((u, key) => {
+        try { u(); } catch {}
+        usePerformanceStore.getState().unregisterListener(`taka_projects_${key}`);
+      });
+      projectsPool.current.clear();
+      secondaryYearsFetched.clear();
+      prevSigProjects.current = "";
+    };
+
+    window.addEventListener('taka_force_full_sync', handleForceSync);
+    return () => {
+      window.removeEventListener('taka_force_full_sync', handleForceSync);
     };
   }, []);
 

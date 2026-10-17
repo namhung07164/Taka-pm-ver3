@@ -11,6 +11,7 @@ export interface ConfigVersions {
   ratesVersion?: number;
   rulesVersion?: number;
   r2Version?: number;
+  pictureMappingVersion?: number;
   permissionsVersion?: number;
   subAppUsersVersion?: number;
   appUsersVersion?: number;
@@ -408,6 +409,15 @@ export function setupStaticConfigSync(): Unsubscribe {
         }
       }
 
+      // 9. Picture Mapping config update notification
+      const remotePicVer = (remoteData as any).pictureMappingVersion || 0;
+      const localPicVer = (localVersions as any).pictureMappingVersion || 0;
+      if (remotePicVer && remotePicVer !== localPicVer) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('taka_cloud_sync_updated'));
+        }
+      }
+
       // Cập nhật lại versions vào local cache
       setLocalConfigVersions({
         locationsVersion: remoteLocVer,
@@ -415,6 +425,7 @@ export function setupStaticConfigSync(): Unsubscribe {
         ratesVersion: remoteRateVer,
         rulesVersion: remoteRuleVer,
         r2Version: remoteR2Ver,
+        pictureMappingVersion: remotePicVer,
         permissionsVersion: remotePermsVer,
         subAppUsersVersion: remoteSubUsersVer,
         appUsersVersion: remoteAppUsersVer,
