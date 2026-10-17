@@ -1,0 +1,10 @@
+{
+  "name": "Remix Taka-pm",
+  "description": "Imported from GitHub: namhung07164/Taka-pm",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
